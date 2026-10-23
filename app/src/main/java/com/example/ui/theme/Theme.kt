@@ -37,11 +37,11 @@ private val LightColorScheme = lightColorScheme(
     onSecondaryContainer = Slate900,
     tertiary = Mint500,
     onTertiary = PureWhite,
-    background = Slate50,
+    background = WarmWhite,
     onBackground = Slate900,
     surface = PureWhite,
     onSurface = Slate900,
-    surfaceVariant = Slate100,
+    surfaceVariant = WarmGray50,
     onSurfaceVariant = Slate600,
     outline = Slate200
 )

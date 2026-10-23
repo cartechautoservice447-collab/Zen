@@ -1,7 +1,7 @@
 package com.example.ui.components
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,18 +12,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.Divider
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,7 +30,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.model.TaskItem
 import com.example.model.TaskPriority
 import com.example.ui.theme.Amber500
@@ -45,11 +42,6 @@ fun TaskRowItem(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val checkboxBg by animateColorAsState(
-        targetValue = if (task.isCompleted) Mint500 else Color.Transparent,
-        label = "task_check_color"
-    )
-
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -60,19 +52,21 @@ fun TaskRowItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Checkbox button
+            // Circular checkbox (24dp)
             Box(
                 modifier = Modifier
-                    .size(26.dp)
+                    .size(24.dp)
                     .clip(CircleShape)
-                    .background(checkboxBg)
                     .then(
-                        if (!task.isCompleted) {
-                            Modifier.background(
-                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                        if (task.isCompleted) {
+                            Modifier.background(Mint500)
+                        } else {
+                            Modifier.border(
+                                width = 2.dp,
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f),
                                 shape = CircleShape
                             )
-                        } else Modifier
+                        }
                     ),
                 contentAlignment = Alignment.Center
             ) {
@@ -83,71 +77,88 @@ fun TaskRowItem(
                         tint = Color.White,
                         modifier = Modifier.size(16.dp)
                     )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .size(22.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surface)
-                    )
                 }
             }
 
-            // Task title and metadata
+            // Task info
             Column(modifier = Modifier.weight(1f)) {
+                // Task title: bodyMedium, Medium weight. Completed: onSurfaceVariant at 0.5f alpha + LineThrough. Not completed: onSurface
                 Text(
                     text = task.title,
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = if (task.isCompleted) FontWeight.Normal else FontWeight.Medium,
-                    color = if (task.isCompleted) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                            else MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Medium,
+                    color = if (task.isCompleted) {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
                     textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
 
+                // Below title: Row with subject chip (primary colored bg, labelSmall Bold) + due date (labelSmall) + priority pill if HIGH/MEDIUM
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Subject tag
-                    Text(
-                        text = task.subjectCode,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
+                    // Subject chip
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                    ) {
+                        Text(
+                            text = task.subjectCode,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
 
-                    // Due date
+                    // Due date: overdue (starts with "Today") in Rose500
+                    val isOverdue = task.dueDate.startsWith("Today")
                     Text(
                         text = task.dueDate,
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (task.dueDate.startsWith("Today")) Rose500 else MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (isOverdue && !task.isCompleted) Rose500 else MaterialTheme.colorScheme.onSurfaceVariant
                     )
+
+                    // Priority pill if HIGH/MEDIUM
+                    if (task.priority == TaskPriority.HIGH || task.priority == TaskPriority.MEDIUM) {
+                        val priorityColor = if (task.priority == TaskPriority.HIGH) Rose500 else Amber500
+                        val priorityText = if (task.priority == TaskPriority.HIGH) "High" else "Medium"
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = priorityColor.copy(alpha = 0.12f)
+                        ) {
+                            Text(
+                                text = priorityText,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = priorityColor,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
                 }
             }
 
-            // Priority dot
-            val priorityColor = when (task.priority) {
-                TaskPriority.HIGH -> Rose500
-                TaskPriority.MEDIUM -> Amber500
-                TaskPriority.NORMAL -> MaterialTheme.colorScheme.outline
+            // Priority indicator: HIGH = Rose500 dot, MEDIUM = Amber500 dot, NORMAL = no indicator
+            if (task.priority != TaskPriority.NORMAL) {
+                val dotColor = if (task.priority == TaskPriority.HIGH) Rose500 else Amber500
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(dotColor)
+                )
             }
-
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(priorityColor)
-            )
         }
 
+        // HorizontalDivider at bottom (0.5dp, outline at 0.15f alpha)
         HorizontalDivider(
-            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
             thickness = 0.5.dp
         )
     }

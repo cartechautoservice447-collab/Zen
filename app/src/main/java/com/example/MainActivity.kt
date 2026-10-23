@@ -34,7 +34,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.ui.components.AddTaskDialog
@@ -130,13 +132,13 @@ fun LearnlyApp(
         return
     }
 
-    // 3. Main Scaffold with Persistent Native Bottom Navigation Bar
+    // 3. Main Scaffold with Redesigned Bottom Navigation Bar
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
             NavigationBar(
                 containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 6.dp,
+                tonalElevation = 2.dp,
                 modifier = Modifier.testTag("bottom_nav_bar")
             ) {
                 AppTab.entries.forEach { tab ->
@@ -144,7 +146,10 @@ fun LearnlyApp(
                     val (selectedIcon, unselectedIcon) = when (tab) {
                         AppTab.HOME -> Pair(Icons.Filled.Home, Icons.Outlined.Home)
                         AppTab.COURSES -> Pair(Icons.Filled.School, Icons.Outlined.School)
-                        AppTab.PLANNER -> Pair(Icons.Filled.CalendarToday, Icons.Outlined.CalendarToday)
+                        AppTab.PLANNER -> Pair(
+                            Icons.Filled.CalendarToday,
+                            Icons.Outlined.CalendarToday
+                        )
                         AppTab.PROGRESS -> Pair(Icons.Filled.BarChart, Icons.Outlined.BarChart)
                         AppTab.PROFILE -> Pair(Icons.Filled.Person, Icons.Outlined.Person)
                     }
@@ -155,13 +160,17 @@ fun LearnlyApp(
                         icon = {
                             Icon(
                                 imageVector = if (isSelected) selectedIcon else unselectedIcon,
-                                contentDescription = tab.label
+                                contentDescription = tab.label,
+                                modifier = Modifier.padding(bottom = 2.dp)
                             )
                         },
                         label = {
                             Text(
                                 text = tab.label,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = 11.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         },
                         colors = NavigationBarItemDefaults.colors(
@@ -187,10 +196,13 @@ fun LearnlyApp(
                     HomeScreen(
                         studentProfile = studentProfile,
                         primaryCourse = courses.firstOrNull(),
+                        courses = courses,
                         tasks = tasks,
                         schedule = schedule,
                         weeklyActivity = weeklyActivity,
                         nextExam = examReminders.firstOrNull(),
+                        examReminders = examReminders,
+                        achievements = achievements,
                         onStartFocusClick = { learnlyViewModel.openFocusScreen() },
                         onAddTaskClick = { learnlyViewModel.openAddTaskDialog() },
                         onViewAllCoursesClick = { learnlyViewModel.selectTab(AppTab.COURSES) },
@@ -198,6 +210,7 @@ fun LearnlyApp(
                         onViewAllProgressClick = { learnlyViewModel.selectTab(AppTab.PROGRESS) },
                         onToggleTask = { learnlyViewModel.toggleTask(it) },
                         onResumeCourse = { learnlyViewModel.openCourseDetail(it) },
+                        onCourseClick = { learnlyViewModel.openCourseDetail(it) },
                         onProfileClick = { learnlyViewModel.selectTab(AppTab.PROFILE) }
                     )
                 }

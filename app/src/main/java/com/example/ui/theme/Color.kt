@@ -2,7 +2,7 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Primary brand colors - Deep Indigo & Periwinkle
+// Primary brand colors - Confident Cobalt/Indigo
 val Indigo900 = Color(0xFF1E1B4B)
 val Indigo800 = Color(0xFF2E2D77)
 val Indigo700 = Color(0xFF3730A3)
@@ -29,6 +29,15 @@ val Amber100 = Color(0xFFFEF3C7)
 val Rose500 = Color(0xFFE11D48)
 val Rose400 = Color(0xFFF43F5E)
 val Rose100 = Color(0xFFFFE4E6)
+
+// Coral accent for meaningful states
+val Coral500 = Color(0xFFF97316)
+val Coral100 = Color(0xFFFFF7ED)
+
+// Warm neutral surfaces (Light Mode)
+val WarmWhite = Color(0xFFFAF9F7)
+val WarmGray50 = Color(0xFFF5F4F2)
+val WarmGray100 = Color(0xFFEDECEA)
 
 // Neutral & Slate surfaces (Light Mode)
 val Slate900 = Color(0xFF0F172A)

@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -32,7 +31,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -50,23 +48,24 @@ fun ActivityChartContainer(
 ) {
     val totalHours = weeklyData.sumOf { it.hours.toDouble() }.toFloat()
     val primaryColor = MaterialTheme.colorScheme.primary
-    val secondaryColor = MaterialTheme.colorScheme.secondary
     val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
     val outlineColor = MaterialTheme.colorScheme.outline
     val textColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val goalColor = Mint500
 
-    var selectedDay by remember { mutableStateOf<DailyActivity?>(weeklyData.firstOrNull { it.day == "Thu" }) }
+    var selectedRange by remember { mutableStateOf("7D") }
+    var selectedDay by remember {
+        mutableStateOf<DailyActivity?>(weeklyData.firstOrNull { it.day == "Thu" } ?: weeklyData.firstOrNull())
+    }
 
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(22.dp))
             .testTag("learning_activity_chart"),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(22.dp),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
-        shadowElevation = 1.dp
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier
@@ -81,7 +80,7 @@ fun ActivityChartContainer(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Box(
                         modifier = Modifier
@@ -97,6 +96,7 @@ fun ActivityChartContainer(
                             modifier = Modifier.size(18.dp)
                         )
                     }
+
                     Column {
                         Text(
                             text = "Learning Activity",
@@ -105,7 +105,7 @@ fun ActivityChartContainer(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Weekly velocity & study hours",
+                            text = "Track your study velocity",
                             style = MaterialTheme.typography.labelSmall,
                             color = textColor
                         )
@@ -114,11 +114,11 @@ fun ActivityChartContainer(
 
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = primaryColor.copy(alpha = 0.1f),
+                    color = primaryColor.copy(alpha = 0.12f),
                     modifier = Modifier.clickable(onClick = onViewAnalyticsClick)
                 ) {
                     Text(
-                        text = "%.1fh total".format(totalHours),
+                        text = "${String.format(java.util.Locale.US, "%.1f", totalHours)}h total",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = primaryColor,
@@ -127,125 +127,183 @@ fun ActivityChartContainer(
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // Canvas Bar Chart
+            // Range Controls (7D, 30D, 90D)
+            val ranges = listOf("7D", "30D", "90D")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ranges.forEach { range ->
+                    val isSelected = selectedRange == range
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                if (isSelected) primaryColor else surfaceVariant
+                            )
+                            .clickable { selectedRange = range }
+                            .padding(horizontal = 14.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = range,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else textColor
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Chart Body (Canvas)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(130.dp)
+                    .height(140.dp)
             ) {
-                Canvas(modifier = Modifier.fillMaxWidth().height(130.dp)) {
-                    val maxHours = 3.5f
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp)
+                ) {
+                    val maxHours = (weeklyData.maxOfOrNull { it.hours } ?: 3.0f).coerceAtLeast(3.5f)
                     val availableWidth = size.width
-                    val availableHeight = size.height - 20.dp.toPx()
+                    val availableHeight = size.height
                     val barCount = weeklyData.size
-                    val spacing = availableWidth / (barCount + 1)
-                    val barWidth = 24.dp.toPx()
+                    if (barCount == 0) return@Canvas
 
-                    // Draw dashed target line (1.5 hrs)
-                    val targetY = availableHeight - (1.5f / maxHours * availableHeight)
+                    val barWidth = 22.dp.toPx()
+                    val cornerRadius = CornerRadius(10.dp.toPx(), 10.dp.toPx())
+                    val spacing = availableWidth / (barCount + 1)
+
+                    val targetHours = weeklyData.firstOrNull()?.targetHours ?: 1.5f
+                    val targetY = availableHeight - (targetHours / maxHours * availableHeight).coerceIn(0f, availableHeight)
+
+                    // Dashed target line at targetHours level (outline color, 1dp)
                     drawLine(
-                        color = outlineColor.copy(alpha = 0.6f),
+                        color = outlineColor.copy(alpha = 0.7f),
                         start = Offset(0f, targetY),
                         end = Offset(availableWidth, targetY),
                         strokeWidth = 1.dp.toPx(),
                         pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
                     )
 
-                    // Draw bars for each day
+                    // Draw pillars and filled bars
                     weeklyData.forEachIndexed { index, activity ->
-                        val barHeight = ((activity.hours / maxHours).coerceIn(0.08f, 1.0f)) * availableHeight
+                        val barHeight = ((activity.hours / maxHours).coerceIn(0.06f, 1.0f)) * availableHeight
                         val x = spacing * (index + 1) - (barWidth / 2f)
                         val y = availableHeight - barHeight
 
                         val isCurrentDay = activity.day == "Thu"
-                        val isGoalMet = activity.hours >= activity.targetHours
+                        val isGoalMet = activity.hours >= activity.targetHours || activity.isGoalMet
 
-                        // Background pillar
+                        // Background pillar (surfaceVariant at 0.4f alpha, 22dp wide, full height, rounded 10dp corners)
                         drawRoundRect(
-                            color = surfaceVariant.copy(alpha = 0.5f),
+                            color = surfaceVariant.copy(alpha = 0.4f),
                             topLeft = Offset(x, 0f),
                             size = Size(barWidth, availableHeight),
-                            cornerRadius = CornerRadius(12f, 12f)
+                            cornerRadius = cornerRadius
                         )
 
-                        // Filled active bar
+                        // Filled bar from bottom (primary for "Thu", Mint500 for goal met, Sky500.copy(0.7f) for others)
                         val barColor = when {
                             isCurrentDay -> primaryColor
                             isGoalMet -> Mint500
-                            else -> Sky500.copy(alpha = 0.8f)
+                            else -> Sky500.copy(alpha = 0.7f)
                         }
 
                         drawRoundRect(
                             color = barColor,
                             topLeft = Offset(x, y),
                             size = Size(barWidth, barHeight),
-                            cornerRadius = CornerRadius(12f, 12f)
+                            cornerRadius = cornerRadius
                         )
                     }
                 }
             }
 
-            // Day labels and interactive selection
+            // Below canvas: Row of day labels with SpaceAround arrangement
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp),
+                    .padding(top = 10.dp),
                 horizontalArrangement = Arrangement.SpaceAround
             ) {
                 weeklyData.forEach { activity ->
                     val isSelected = selectedDay?.day == activity.day
                     val isToday = activity.day == "Thu"
+                    val isGoalMet = activity.hours >= activity.targetHours || activity.isGoalMet
 
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .clickable { selectedDay = activity }
-                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                            .padding(horizontal = 6.dp, vertical = 4.dp)
                     ) {
                         Text(
                             text = activity.day,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isToday) primaryColor else if (isSelected) MaterialTheme.colorScheme.onSurface else textColor
+                            color = when {
+                                isToday -> primaryColor
+                                isSelected -> MaterialTheme.colorScheme.onSurface
+                                else -> textColor
+                            }
                         )
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "%.1fh".format(activity.hours),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontSize = 10.sp,
-                            color = if (activity.hours >= activity.targetHours) Mint500 else textColor
+                            text = "${activity.hours}h",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            fontWeight = if (isGoalMet) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (isGoalMet) Mint500 else textColor
                         )
                     }
                 }
             }
 
-            // Selected day dynamic tip/stat
+            // Selected Day Summary
             selectedDay?.let { day ->
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(14.dp))
+                val isMet = day.hours >= day.targetHours || day.isGoalMet
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(surfaceVariant.copy(alpha = 0.6f))
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .background(surfaceVariant)
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "${day.day}: ${day.hours}h logged • ${day.completedLessons} lessons finished",
+                        text = "${day.day}: ${day.hours}h logged • ${day.completedLessons} lessons",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = if (day.hours >= day.targetHours) "Target met" else "Below target",
+                        text = if (isMet) "Target met" else "Below target",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = if (day.hours >= day.targetHours) Mint500 else textColor
+                        color = if (isMet) Mint500 else textColor
                     )
                 }
+            }
+
+            // Most Productive Day
+            val mostProductive = weeklyData.maxByOrNull { it.hours }
+            if (mostProductive != null) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = "Most productive: ${mostProductive.day} (${mostProductive.hours}h)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = textColor,
+                    modifier = Modifier.padding(start = 2.dp)
+                )
             }
         }
     }

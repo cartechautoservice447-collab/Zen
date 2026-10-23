@@ -28,9 +28,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.Amber500
@@ -51,41 +52,80 @@ fun LearnlyTopBar(
         else -> "Good evening"
     }
 
+    val firstName = studentName
+        .trim()
+        .split("\\s+".toRegex())
+        .firstOrNull()
+        ?.ifBlank { "Student" }
+        ?: "Student"
+
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+            .padding(horizontal = 20.dp, vertical = 14.dp)
+            .testTag("learnly_top_bar"),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        // Left Column: Branding, Greeting + First Name, Motivational Subtitle
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 12.dp)
+        ) {
+            Text(
+                text = "LEARNLY",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.2.sp,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.testTag("learnly_brand_label")
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
                     text = "$greeting,",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = studentName.split(" ").firstOrNull() ?: "Student",
+                    text = firstName,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
                 )
             }
+
+            Spacer(modifier = Modifier.height(2.dp))
+
             Text(
                 text = "“A little progress, every day.”",
                 style = MaterialTheme.typography.labelSmall,
+                fontStyle = FontStyle.Italic,
                 color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Medium
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.testTag("motivational_quote")
             )
         }
 
+        // Right Actions: Streak Pill, Notification Bell with Badge, Profile Avatar
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Streak Pill
+            // Study-Streak Pill Badge
             Surface(
                 shape = RoundedCornerShape(20.dp),
                 color = MaterialTheme.colorScheme.primaryContainer,
@@ -111,14 +151,15 @@ fun LearnlyTopBar(
                 }
             }
 
-            // Notification Bell with indicator
+            // Notification Bell with Unread Indicator Badge
             BadgedBox(
                 badge = {
                     Badge(
                         containerColor = Mint500,
                         modifier = Modifier.size(7.dp)
                     )
-                }
+                },
+                modifier = Modifier.testTag("notification_badge_box")
             ) {
                 IconButton(
                     onClick = onNotificationClick,
@@ -135,7 +176,14 @@ fun LearnlyTopBar(
                 }
             }
 
-            // Avatar initial circle
+            // Profile Avatar Circle with Student Initials
+            val initials = studentName
+                .trim()
+                .split("\\s+".toRegex())
+                .mapNotNull { it.firstOrNull()?.uppercaseChar()?.toString() }
+                .take(2)
+                .joinToString("")
+
             Box(
                 modifier = Modifier
                     .size(38.dp)
@@ -145,11 +193,6 @@ fun LearnlyTopBar(
                     .testTag("profile_avatar"),
                 contentAlignment = Alignment.Center
             ) {
-                val initials = studentName
-                    .split(" ")
-                    .mapNotNull { it.firstOrNull()?.toString() }
-                    .take(2)
-                    .joinToString("")
                 Text(
                     text = initials.ifEmpty { "L" },
                     color = MaterialTheme.colorScheme.onPrimary,

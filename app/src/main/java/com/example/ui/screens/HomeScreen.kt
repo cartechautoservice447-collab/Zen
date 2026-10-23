@@ -1,7 +1,6 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,20 +15,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -39,11 +34,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.model.Achievement
 import com.example.model.Course
 import com.example.model.DailyActivity
 import com.example.model.ExamReminder
@@ -51,21 +47,27 @@ import com.example.model.StudentProfile
 import com.example.model.TaskItem
 import com.example.model.TimetableSlot
 import com.example.ui.components.ActivityChartContainer
+import com.example.ui.components.AchievementsSection
 import com.example.ui.components.ContinueLearningCard
 import com.example.ui.components.KpiStatCardsRow
 import com.example.ui.components.LearnlyTopBar
+import com.example.ui.components.MyCoursesSection
+import com.example.ui.components.StudyInsightCard
 import com.example.ui.components.TaskRowItem
-import com.example.ui.theme.Mint500
-import com.example.ui.theme.Sky500
+import com.example.ui.components.TodaysLearningGoals
+import com.example.ui.components.UpcomingDeadlinesSection
 
 @Composable
 fun HomeScreen(
     studentProfile: StudentProfile,
     primaryCourse: Course?,
+    courses: List<Course>,
     tasks: List<TaskItem>,
     schedule: List<TimetableSlot>,
     weeklyActivity: List<DailyActivity>,
     nextExam: ExamReminder?,
+    examReminders: List<ExamReminder>,
+    achievements: List<Achievement>,
     onStartFocusClick: () -> Unit,
     onAddTaskClick: () -> Unit,
     onViewAllCoursesClick: () -> Unit,
@@ -73,6 +75,7 @@ fun HomeScreen(
     onViewAllProgressClick: () -> Unit,
     onToggleTask: (String) -> Unit,
     onResumeCourse: (Course) -> Unit,
+    onCourseClick: (Course) -> Unit,
     onProfileClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -80,9 +83,9 @@ fun HomeScreen(
         modifier = modifier
             .fillMaxSize()
             .testTag("home_screen"),
-        contentPadding = PaddingValues(bottom = 100.dp)
+        contentPadding = PaddingValues(bottom = 24.dp)
     ) {
-        // 1. Top Bar
+        // ── A. Welcome Header ──────────────────────────────────────
         item {
             LearnlyTopBar(
                 studentName = studentProfile.name,
@@ -92,30 +95,30 @@ fun HomeScreen(
             )
         }
 
-        // 2. Horizontally scrollable rounded KPI Cards
+        // ── B. Learning Statistics Carousel ────────────────────────
         item {
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             KpiStatCardsRow(
                 profile = studentProfile,
                 nextExam = nextExam,
                 onCardClick = { cardType ->
                     when (cardType) {
                         "focus" -> onStartFocusClick()
-                        "streak", "lessons" -> onViewAllProgressClick()
-                        "exam" -> onViewAllPlannerClick()
+                        "streak", "lessons", "weekly_hours", "xp" -> onViewAllProgressClick()
+                        "exam", "weekly_goal" -> onViewAllPlannerClick()
                     }
                 }
             )
             Spacer(modifier = Modifier.height(20.dp))
         }
 
-        // 3. Quick Action Bar
+        // ── C. Quick Actions ───────────────────────────────────────
         item {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Button(
                     onClick = onStartFocusClick,
@@ -125,7 +128,7 @@ fun HomeScreen(
                     ),
                     modifier = Modifier
                         .weight(1f)
-                        .height(44.dp)
+                        .height(46.dp)
                         .testTag("home_start_focus_button")
                 ) {
                     Icon(
@@ -134,7 +137,12 @@ fun HomeScreen(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Focus Timer", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    Text(
+                        "Focus Session",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp,
+                        maxLines = 1
+                    )
                 }
 
                 OutlinedButton(
@@ -142,7 +150,7 @@ fun HomeScreen(
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier
                         .weight(1f)
-                        .height(44.dp)
+                        .height(46.dp)
                         .testTag("home_add_task_button")
                 ) {
                     Icon(
@@ -151,13 +159,18 @@ fun HomeScreen(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("New Task", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    Text(
+                        "Add New Task",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp,
+                        maxLines = 1
+                    )
                 }
             }
-            Spacer(modifier = Modifier.height(22.dp))
+            Spacer(modifier = Modifier.height(24.dp))
         }
 
-        // 4. Continue Learning (Khan Academy inspired)
+        // ── D. Continue Learning — Featured Course ─────────────────
         primaryCourse?.let { course ->
             item {
                 Column(modifier = Modifier.padding(horizontal = 20.dp)) {
@@ -173,16 +186,21 @@ fun HomeScreen(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         TextButton(onClick = onViewAllCoursesClick) {
-                            Text("All Courses", color = MaterialTheme.colorScheme.primary)
+                            Text(
+                                "All Courses",
+                                color = MaterialTheme.colorScheme.primary,
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
                             Icon(
                                 imageVector = Icons.Default.ArrowForward,
                                 contentDescription = null,
-                                modifier = Modifier.size(14.dp)
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     ContinueLearningCard(
                         course = course,
                         onContinueClick = { onResumeCourse(course) }
@@ -192,7 +210,17 @@ fun HomeScreen(
             }
         }
 
-        // 5. Boxed Learning Activity Graph (Strava / Money Manager inspired)
+        // ── E. Today's Learning Goals ──────────────────────────────
+        item {
+            TodaysLearningGoals(
+                profile = studentProfile,
+                weeklyActivity = weeklyActivity,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // ── F. Learning Activity Chart ─────────────────────────────
         item {
             Box(modifier = Modifier.padding(horizontal = 20.dp)) {
                 ActivityChartContainer(
@@ -200,10 +228,22 @@ fun HomeScreen(
                     onViewAnalyticsClick = onViewAllProgressClick
                 )
             }
-            Spacer(modifier = Modifier.height(26.dp))
+            Spacer(modifier = Modifier.height(24.dp))
         }
 
-        // 6. Today's Schedule (Unboxed clean layout per rules)
+        // ── G. My Courses ──────────────────────────────────────────
+        if (courses.size > 1) {
+            item {
+                MyCoursesSection(
+                    courses = courses,
+                    onCourseClick = onCourseClick,
+                    onViewAllClick = onViewAllCoursesClick
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+
+        // ── H. Today's Schedule ────────────────────────────────────
         item {
             Column(
                 modifier = Modifier
@@ -232,24 +272,26 @@ fun HomeScreen(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
-
                     TextButton(onClick = onViewAllPlannerClick) {
-                        Text("Planner", color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            "View Planner",
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.labelMedium
+                        )
                     }
                 }
-
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
             }
         }
 
-        items(schedule.take(3)) { slot ->
+        items(schedule.take(3), key = { it.id }) { slot ->
             ScheduleRowItem(
                 slot = slot,
                 modifier = Modifier.padding(horizontal = 20.dp)
             )
         }
 
-        // 7. Today's Tasks & Assignments (Todoist inspired, unboxed clean list)
+        // ── I. Assignments and Tasks ───────────────────────────────
         item {
             Spacer(modifier = Modifier.height(20.dp))
             Column(
@@ -278,7 +320,7 @@ fun HomeScreen(
             }
         }
 
-        items(tasks.take(4)) { task ->
+        items(tasks.take(4), key = { it.id }) { task ->
             TaskRowItem(
                 task = task,
                 onToggle = { onToggleTask(task.id) },
@@ -286,55 +328,59 @@ fun HomeScreen(
             )
         }
 
-        // 8. Weekly Goal Progress bar (HabitNow inspired)
-        item {
-            Spacer(modifier = Modifier.height(20.dp))
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Weekly Commitment Goal",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = "14.4h / 15.0h (96%)",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    LinearProgressIndicator(
-                        progress = { 0.96f },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp)),
-                        color = Mint500,
-                        trackColor = MaterialTheme.colorScheme.surface
-                    )
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
+        if (tasks.size > 4) {
+            item {
+                TextButton(
+                    onClick = onViewAllPlannerClick,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                ) {
                     Text(
-                        text = "Only 36 mins needed to hit your weekly target!",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        "View All Tasks",
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        imageVector = Icons.Default.ArrowForward,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
+            }
+        }
+
+        // ── J. Upcoming Deadlines ──────────────────────────────────
+        if (examReminders.isNotEmpty()) {
+            item {
+                Spacer(modifier = Modifier.height(20.dp))
+                UpcomingDeadlinesSection(
+                    exams = examReminders
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+
+        // ── K. Study Insights ──────────────────────────────────────
+        item {
+            StudyInsightCard(
+                profile = studentProfile,
+                weeklyActivity = weeklyActivity,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // ── L. Achievements & Milestones ───────────────────────────
+        if (achievements.isNotEmpty()) {
+            item {
+                AchievementsSection(
+                    achievements = achievements,
+                    streakDays = studentProfile.streakDays,
+                    totalHours = studentProfile.totalStudyHours
+                )
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
@@ -353,21 +399,24 @@ fun ScheduleRowItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Time column
-            Column(modifier = Modifier.width(90.dp)) {
+            Column(modifier = Modifier.width(88.dp)) {
                 Text(
                     text = slot.timeRange.split("-").firstOrNull()?.trim() ?: "",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (slot.isNow) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    color = if (slot.isNow) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1
                 )
                 Text(
                     text = slot.timeRange.split("-").getOrNull(1)?.trim() ?: "",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
                 )
             }
 
-            // Divider vertical tick
+            // Timeline bar
             Box(
                 modifier = Modifier
                     .width(3.dp)
@@ -391,7 +440,10 @@ fun ScheduleRowItem(
                         text = slot.subjectName,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
                     if (slot.isNow) {
                         Surface(
@@ -404,22 +456,27 @@ fun ScheduleRowItem(
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                modifier = Modifier.padding(
+                                    horizontal = 5.dp,
+                                    vertical = 1.dp
+                                )
                             )
                         }
                     }
                 }
 
                 Text(
-                    text = "${slot.subjectCode} • ${slot.roomLocation} • ${slot.instructor}",
+                    text = "${slot.subjectCode} · ${slot.roomLocation} · ${slot.instructor}",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
 
         HorizontalDivider(
-            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
             thickness = 0.5.dp
         )
     }
