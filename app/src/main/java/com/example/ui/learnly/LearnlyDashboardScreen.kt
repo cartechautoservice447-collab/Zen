@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -26,10 +27,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -90,7 +92,9 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LearnlyDashboard() {
-    val scrollState = rememberScrollState()
+    // Lazy composition keeps off-screen dashboard sections out of the active composition.
+    // This reduces work during scroll, timer updates, and small state changes.
+    val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     var selectedDestination by remember { mutableStateOf(Destination.Home) }
     var activeSheet by remember { mutableStateOf<DashboardSheet?>(null) }
@@ -99,11 +103,14 @@ fun LearnlyDashboard() {
     var timerSeconds by remember { mutableIntStateOf(25 * 60) }
     var timerRunning by remember { mutableStateOf(false) }
 
-    LaunchedEffect(timerRunning, timerSeconds) {
-        if (timerRunning && timerSeconds > 0) {
-            delay(1_000)
-            timerSeconds -= 1
-        } else if (timerSeconds <= 0) {
+    // Keep the ticker keyed to running/paused state, not every second.
+    // When the timer is not on screen, ticks won't invalidate the full dashboard.
+    LaunchedEffect(timerRunning) {
+        if (timerRunning) {
+            while (timerSeconds > 0) {
+                delay(1_000)
+                timerSeconds = (timerSeconds - 1).coerceAtLeast(0)
+            }
             timerRunning = false
         }
     }
@@ -115,9 +122,10 @@ fun LearnlyDashboard() {
     val onNavigate: (Destination) -> Unit = { destination ->
         selectedDestination = destination
         when (destination) {
-            Destination.Home -> scope.launch { scrollState.animateScrollTo(0) }
-            Destination.Learn -> scope.launch { scrollState.animateScrollTo(1400) }
-            Destination.Plan -> scope.launch { scrollState.animateScrollTo(1800) }
+            Destination.Home -> scope.launch { listState.animateScrollToItem(0) }
+            // Scroll to semantic section items instead of device-dependent pixel offsets.
+            Destination.Learn -> scope.launch { listState.animateScrollToItem(5) }
+            Destination.Plan -> scope.launch { listState.animateScrollToItem(6) }
             Destination.More -> activeSheet = DashboardSheet.More
         }
     }
@@ -127,46 +135,61 @@ fun LearnlyDashboard() {
             .fillMaxSize()
             .background(Canvas)
     ) {
-        Column(
+        LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(scrollState)
+                .background(Canvas),
+            contentPadding = PaddingValues(bottom = 116.dp)
         ) {
-            HeaderAndFocus(
-                onNotifications = { activeSheet = DashboardSheet.Notifications },
-                onStartStudying = openTimer
-            )
-            ContinueLearningSection(onResume = { openCourse(courseSeed.first()) })
-            LearningRhythmSection(
-                period = period,
-                onPeriodChanged = { period = it },
-                onDetails = { activeSheet = DashboardSheet.Analytics }
-            )
-            QuickToolsSection(
-                onToolClick = { tool ->
-                    activeSheet = when (tool) {
-                        ToolKind.Notes -> DashboardSheet.Notes
-                        ToolKind.Flashcards -> DashboardSheet.Flashcards
-                        ToolKind.Quiz -> DashboardSheet.Quiz
-                        ToolKind.FocusTimer -> DashboardSheet.FocusTimer
-                    }
-                },
-                onStartFocus = openTimer
-            )
-            AchievementsSection()
-            CoursesSection(
-                courses = courseSeed,
-                onSeeAll = { activeSheet = DashboardSheet.AllCourses },
-                onCourseClick = openCourse
-            )
-            TodayPlanSection(
-                tasks = tasks,
-                onToggleTask = { id ->
-                    tasks = tasks.map { task -> if (task.id == id) task.copy(done = !task.done) else task }
-                },
-                onSeeFullPlan = { activeSheet = DashboardSheet.FullPlan }
-            )
-            Spacer(Modifier.height(116.dp))
+            item(key = "header_focus") {
+                HeaderAndFocus(
+                    onNotifications = { activeSheet = DashboardSheet.Notifications },
+                    onStartStudying = openTimer
+                )
+            }
+            item(key = "continue_learning") {
+                ContinueLearningSection(onResume = { openCourse(courseSeed.first()) })
+            }
+            item(key = "learning_rhythm") {
+                LearningRhythmSection(
+                    period = period,
+                    onPeriodChanged = { period = it },
+                    onDetails = { activeSheet = DashboardSheet.Analytics }
+                )
+            }
+            item(key = "quick_tools") {
+                QuickToolsSection(
+                    onToolClick = { tool ->
+                        activeSheet = when (tool) {
+                            ToolKind.Notes -> DashboardSheet.Notes
+                            ToolKind.Flashcards -> DashboardSheet.Flashcards
+                            ToolKind.Quiz -> DashboardSheet.Quiz
+                            ToolKind.FocusTimer -> DashboardSheet.FocusTimer
+                        }
+                    },
+                    onStartFocus = openTimer
+                )
+            }
+            item(key = "achievements") {
+                AchievementsSection()
+            }
+            item(key = "courses") {
+                CoursesSection(
+                    courses = courseSeed,
+                    onSeeAll = { activeSheet = DashboardSheet.AllCourses },
+                    onCourseClick = openCourse
+                )
+            }
+            item(key = "today_plan") {
+                TodayPlanSection(
+                    tasks = tasks,
+                    onToggleTask = { id ->
+                        tasks = tasks.map { task -> if (task.id == id) task.copy(done = !task.done) else task }
+                    },
+                    onSeeFullPlan = { activeSheet = DashboardSheet.FullPlan }
+                )
+            }
         }
 
         BottomNavigationBar(
@@ -489,6 +512,7 @@ fun PeriodSelector(period: String, onPeriodChanged: (String) -> Unit) {
                     .clip(CircleShape)
                     .background(if (selected) Color.White else Color.Transparent)
                     .clickable { onPeriodChanged(value) }
+                    .heightIn(min = 44.dp)
                     .padding(horizontal = 9.dp, vertical = 9.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -565,17 +589,37 @@ fun ToolTile(title: String, tileColor: Color, iconColor: Color, icon: androidx.c
             .padding(horizontal = 1.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            Modifier
-                .size(72.dp)
-                .clip(RoundedCornerShape(25.dp))
-                .background(tileColor),
+        // Keep the four-tool row intact while scaling the pastel icon tiles on narrow phones.
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, null, tint = iconColor, modifier = Modifier.size(33.dp))
+            val tileSize = maxWidth.coerceAtMost(72.dp)
+            val glyphSize = if (tileSize < 64.dp) 28.dp else 33.dp
+            Box(
+                Modifier
+                    .size(tileSize)
+                    .clip(RoundedCornerShape(tileSize * 0.35f))
+                    .background(tileColor),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, null, tint = iconColor, modifier = Modifier.size(glyphSize))
+            }
         }
         Spacer(Modifier.height(11.dp))
-        Text(title, color = Ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, lineHeight = 18.sp, minLines = 2, maxLines = 2)
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            Text(
+                title,
+                color = Ink,
+                fontSize = if (maxWidth < 72.dp) 12.sp else 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                lineHeight = 18.sp,
+                minLines = 2,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
@@ -806,6 +850,11 @@ fun BottomNavigationBar(selected: Destination, onSelect: (Destination) -> Unit, 
 @Composable
 fun NavigationItem(destination: Destination, selected: Destination, label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onSelect: (Destination) -> Unit) {
     val active = destination == selected
+    val activeProgress by animateFloatAsState(
+        targetValue = if (active) 1f else 0f,
+        animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+        label = "nav_active_${destination.name.lowercase()}"
+    )
     Column(
         modifier = modifier
             .fillMaxHeight()
@@ -816,13 +865,22 @@ fun NavigationItem(destination: Destination, selected: Destination, label: Strin
     ) {
         Box(
             modifier = Modifier
-                .width(if (active) 54.dp else 48.dp)
+                .width(48.dp + 6.dp * activeProgress)
                 .height(35.dp)
                 .clip(CircleShape)
-                .background(if (active) Purple else Color.Transparent),
+                .background(Purple.copy(alpha = activeProgress)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, null, tint = if (active) Color.White else Color(0xFF77798D), modifier = Modifier.size(23.dp))
+            Icon(
+                icon,
+                null,
+                tint = if (active) Color.White else Color(0xFF77798D),
+                modifier = Modifier.size(23.dp).graphicsLayer {
+                    val scale = 0.96f + (0.04f * activeProgress)
+                    scaleX = scale
+                    scaleY = scale
+                }
+            )
         }
         Spacer(Modifier.height(1.dp))
         Text(label, color = if (active) Ink else Color(0xFF77798D), fontSize = 11.sp, fontWeight = if (active) FontWeight.Bold else FontWeight.Medium)
