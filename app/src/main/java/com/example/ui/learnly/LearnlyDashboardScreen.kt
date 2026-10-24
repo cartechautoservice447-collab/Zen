@@ -1,5 +1,8 @@
 package com.example.ui.learnly
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,11 +26,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -71,11 +73,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -90,7 +90,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LearnlyDashboard() {
-    val listState = rememberLazyListState()
+    val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
     var selectedDestination by remember { mutableStateOf(Destination.Home) }
     var activeSheet by remember { mutableStateOf<DashboardSheet?>(null) }
@@ -115,65 +115,58 @@ fun LearnlyDashboard() {
     val onNavigate: (Destination) -> Unit = { destination ->
         selectedDestination = destination
         when (destination) {
-            Destination.Home -> scope.launch { listState.animateScrollToItem(0) }
-            Destination.Learn -> scope.launch { listState.animateScrollToItem(5) }
-            Destination.Plan -> scope.launch { listState.animateScrollToItem(6) }
+            Destination.Home -> scope.launch { scrollState.animateScrollTo(0) }
+            Destination.Learn -> scope.launch { scrollState.animateScrollTo(1400) }
+            Destination.Plan -> scope.launch { scrollState.animateScrollTo(1800) }
             Destination.More -> activeSheet = DashboardSheet.More
         }
     }
 
-    Box(Modifier.fillMaxSize().background(Canvas)) {
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 116.dp)
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Canvas)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
         ) {
-            item(key = "focus-header") {
-                HeaderAndFocus(
-                    onNotifications = { activeSheet = DashboardSheet.Notifications },
-                    onStartStudying = openTimer
-                )
-            }
-            item(key = "continue-learning") {
-                ContinueLearningSection(onResume = { openCourse(courseSeed.first()) })
-            }
-            item(key = "learning-rhythm") {
-                LearningRhythmSection(
-                    period = period,
-                    onPeriodChanged = { period = it },
-                    onDetails = { activeSheet = DashboardSheet.Analytics }
-                )
-            }
-            item(key = "quick-tools") {
-                QuickToolsSection(
-                    onToolClick = { tool ->
-                        activeSheet = when (tool) {
-                            ToolKind.Notes -> DashboardSheet.Notes
-                            ToolKind.Flashcards -> DashboardSheet.Flashcards
-                            ToolKind.Quiz -> DashboardSheet.Quiz
-                            ToolKind.FocusTimer -> DashboardSheet.FocusTimer
-                        }
-                    },
-                    onStartFocus = openTimer
-                )
-            }
-            item(key = "achievements") { AchievementsSection() }
-            item(key = "courses") {
-                CoursesSection(
-                    courses = courseSeed,
-                    onSeeAll = { activeSheet = DashboardSheet.AllCourses },
-                    onCourseClick = openCourse
-                )
-            }
-            item(key = "today-plan") {
-                TodayPlanSection(
-                    tasks = tasks,
-                    onToggleTask = { id ->
-                        tasks = tasks.map { task -> if (task.id == id) task.copy(done = !task.done) else task }
-                    },
-                    onSeeFullPlan = { activeSheet = DashboardSheet.FullPlan }
-                )
-            }
+            HeaderAndFocus(
+                onNotifications = { activeSheet = DashboardSheet.Notifications },
+                onStartStudying = openTimer
+            )
+            ContinueLearningSection(onResume = { openCourse(courseSeed.first()) })
+            LearningRhythmSection(
+                period = period,
+                onPeriodChanged = { period = it },
+                onDetails = { activeSheet = DashboardSheet.Analytics }
+            )
+            QuickToolsSection(
+                onToolClick = { tool ->
+                    activeSheet = when (tool) {
+                        ToolKind.Notes -> DashboardSheet.Notes
+                        ToolKind.Flashcards -> DashboardSheet.Flashcards
+                        ToolKind.Quiz -> DashboardSheet.Quiz
+                        ToolKind.FocusTimer -> DashboardSheet.FocusTimer
+                    }
+                },
+                onStartFocus = openTimer
+            )
+            AchievementsSection()
+            CoursesSection(
+                courses = courseSeed,
+                onSeeAll = { activeSheet = DashboardSheet.AllCourses },
+                onCourseClick = openCourse
+            )
+            TodayPlanSection(
+                tasks = tasks,
+                onToggleTask = { id ->
+                    tasks = tasks.map { task -> if (task.id == id) task.copy(done = !task.done) else task }
+                },
+                onSeeFullPlan = { activeSheet = DashboardSheet.FullPlan }
+            )
+            Spacer(Modifier.height(116.dp))
         }
 
         BottomNavigationBar(
@@ -194,7 +187,13 @@ fun LearnlyDashboard() {
             containerColor = Color.White,
             contentColor = Ink,
             dragHandle = {
-                Box(Modifier.padding(top = 10.dp, bottom = 6.dp).size(width = 38.dp, height = 4.dp).clip(CircleShape).background(Color(0xFFD8D7E0)))
+                Box(
+                    Modifier
+                        .padding(top = 10.dp, bottom = 6.dp)
+                        .size(width = 38.dp, height = 4.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFD8D7E0))
+                )
             }
         ) {
             Column(
@@ -250,7 +249,7 @@ fun HeaderAndFocus(onNotifications: () -> Unit, onStartStudying: () -> Unit) {
             Box(
                 modifier = Modifier
                     .size(48.dp)
-                    .background(Brush.linearGradient(listOf(Purple, Violet)), CircleShape),
+                    .background(PurpleToVioletLinear, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Text("A", fontSize = 21.sp, color = Color.White, fontWeight = FontWeight.Medium)
@@ -295,15 +294,8 @@ fun TodayFocusCard(onStartStudying: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(14.dp, RoundedCornerShape(30.dp), ambientColor = Purple.copy(alpha = 0.12f), spotColor = Purple.copy(alpha = 0.16f))
             .clip(RoundedCornerShape(30.dp))
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(Color(0xFF141B2D), Color(0xFF151C31), Color(0xFF181C3A)),
-                    start = Offset(0f, 0f),
-                    end = Offset(900f, 400f)
-                )
-            )
+            .background(FocusCardGradient)
             .border(1.dp, NightBorder, RoundedCornerShape(30.dp))
             .padding(24.dp)
     ) {
@@ -339,7 +331,7 @@ fun TodayFocusCard(onStartStudying: () -> Unit) {
             }
         }
         Spacer(Modifier.height(20.dp))
-        ProgressTrack(progress = 0.625f, height = 9.dp, trackColor = Color(0xFF20283C), fill = Brush.horizontalGradient(listOf(Purple, Violet)))
+        ProgressTrack(progress = 0.625f, height = 9.dp, trackColor = Color(0xFF20283C), fill = PurpleToVioletGradient)
         Spacer(Modifier.height(24.dp))
         GradientButton(
             text = "Start studying",
@@ -361,7 +353,7 @@ fun ContinueLearningSection(onResume: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(32.dp))
-                .background(Brush.linearGradient(listOf(Color(0xFF6257F2), Color(0xFF8251F4), Color(0xFF9554F1))))
+                .background(ContinueCardGradient)
                 .padding(24.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -496,7 +488,6 @@ fun PeriodSelector(period: String, onPeriodChanged: (String) -> Unit) {
                 modifier = Modifier
                     .clip(CircleShape)
                     .background(if (selected) Color.White else Color.Transparent)
-                    .then(if (selected) Modifier.shadow(2.dp, CircleShape) else Modifier)
                     .clickable { onPeriodChanged(value) }
                     .padding(horizontal = 9.dp, vertical = 9.dp),
                 contentAlignment = Alignment.Center
@@ -519,15 +510,20 @@ fun RhythmChart(period: String) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.Bottom
     ) {
-        bars.forEachIndexed { index, value ->
+        bars.forEachIndexed { index, targetVal ->
+            val animatedHeight by animateFloatAsState(
+                targetValue = targetVal,
+                animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+                label = "barHeight_$index"
+            )
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
                 Box(Modifier.height(120.dp).width(26.dp), contentAlignment = Alignment.BottomCenter) {
                     Box(
                         Modifier
                             .width(23.dp)
-                            .fillMaxHeight(value)
+                            .fillMaxHeight(animatedHeight)
                             .clip(RoundedCornerShape(18.dp))
-                            .background(if (index == 5) Brush.verticalGradient(listOf(Color(0xFF5F45E8), Color(0xFF7846E9))) else Brush.verticalGradient(listOf(Color(0xFFD8D2FA), Color(0xFFC9C0F6))))
+                            .background(if (index == 5) ActiveBarGradient else InactiveBarGradient)
                     )
                 }
                 Spacer(Modifier.height(9.dp))
@@ -642,7 +638,7 @@ fun AchievementCard(
                 }
             }
         } else {
-            ProgressTrack(0.8f, 8.dp, Color(0xFFF0EFF5), Brush.horizontalGradient(listOf(Gold, Color(0xFFFFD46D))))
+            ProgressTrack(0.8f, 8.dp, Color(0xFFF0EFF5), GoldProgressGradient)
             Spacer(Modifier.height(7.dp))
             Text("4/5", color = Color(0xFF77798A), fontSize = 15.sp, fontWeight = FontWeight.Bold)
         }
@@ -651,8 +647,6 @@ fun AchievementCard(
 
 @Composable
 fun CoursesSection(courses: List<CourseItem>, onSeeAll: () -> Unit, onCourseClick: (CourseItem) -> Unit) {
-    val configuration = LocalConfiguration.current
-    val cardWidth = ((configuration.screenWidthDp.dp - 60.dp) / 2).coerceIn(148.dp, 190.dp)
     Column(Modifier.fillMaxWidth().padding(top = 32.dp)) {
         Row(Modifier.padding(horizontal = 24.dp), verticalAlignment = Alignment.CenterVertically) {
             SectionHeading("Your courses", modifier = Modifier.weight(1f))
@@ -662,11 +656,14 @@ fun CoursesSection(courses: List<CourseItem>, onSeeAll: () -> Unit, onCourseClic
         }
         Spacer(Modifier.height(12.dp))
         Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 24.dp),
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             courses.forEach { course ->
-                CourseCard(course = course, modifier = Modifier.width(cardWidth), onClick = { onCourseClick(course) })
+                CourseCard(course = course, modifier = Modifier.width(172.dp), onClick = { onCourseClick(course) })
             }
         }
     }
@@ -745,7 +742,10 @@ fun TodayPlanSection(tasks: List<StudyTask>, onToggleTask: (Int) -> Unit, onSeeF
 @Composable
 fun TaskRow(task: StudyTask, onToggle: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onToggle)
+            .padding(vertical = 12.dp),
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(11.dp)
     ) {
@@ -755,8 +755,7 @@ fun TaskRow(task: StudyTask, onToggle: () -> Unit) {
                 .size(26.dp)
                 .clip(CircleShape)
                 .background(if (task.done) Color(0xFF49D6AA) else Color.Transparent)
-                .border(if (task.done) 0.dp else 1.5.dp, if (task.done) Color.Transparent else Color(0xFF434B60), CircleShape)
-                .clickable(onClick = onToggle),
+                .border(if (task.done) 0.dp else 1.5.dp, if (task.done) Color.Transparent else Color(0xFF434B60), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             if (task.done) Icon(Icons.Filled.Check, null, tint = Night, modifier = Modifier.size(19.dp))
@@ -790,7 +789,6 @@ fun BottomNavigationBar(selected: Destination, onSelect: (Destination) -> Unit, 
             .padding(horizontal = 12.dp, vertical = 8.dp)
             .fillMaxWidth()
             .height(70.dp)
-            .shadow(10.dp, RoundedCornerShape(42.dp), ambientColor = Purple.copy(alpha = 0.08f), spotColor = Purple.copy(alpha = 0.1f))
             .clip(RoundedCornerShape(42.dp))
             .background(Lavender)
             .border(1.dp, Color(0xFFD3C9FF), RoundedCornerShape(42.dp))
@@ -871,10 +869,11 @@ fun GradientButton(
         modifier = Modifier
             .fillMaxWidth()
             .height(height)
-            .shadow(10.dp, RoundedCornerShape(radius), ambientColor = Purple.copy(alpha = 0.18f), spotColor = Purple.copy(alpha = 0.18f))
     ) {
         Row(
-            modifier = Modifier.background(Brush.horizontalGradient(listOf(Purple, Violet))).padding(horizontal = 12.dp),
+            modifier = Modifier
+                .background(PurpleToVioletGradient)
+                .padding(horizontal = 12.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {

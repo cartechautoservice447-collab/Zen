@@ -327,7 +327,7 @@ fun CourseDetailSheet(course: CourseItem, onResume: () -> Unit) {
         }
     }
     Spacer(Modifier.height(18.dp))
-    ProgressTrack(course.progress, 10.dp, Color(0xFFECEAF4), Brush.horizontalGradient(listOf(Purple, Violet)))
+    ProgressTrack(course.progress, 10.dp, Color(0xFFECEAF4), PurpleToVioletGradient)
     Spacer(Modifier.height(22.dp))
     Text("Up next", color = MutedDark, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     Spacer(Modifier.height(5.dp))

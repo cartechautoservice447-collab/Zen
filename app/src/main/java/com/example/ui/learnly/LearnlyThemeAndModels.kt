@@ -1,5 +1,8 @@
 package com.example.ui.learnly
 
+import androidx.compose.runtime.Immutable
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
 val Night = Color(0xFF0B1020)
@@ -23,6 +26,22 @@ val SoftCoral = Color(0xFFFFE7E1)
 val SoftYellow = Color(0xFFFFF1C9)
 val SoftMint = Color(0xFFD9F7E9)
 
+// Pre-cached immutable Brushes to avoid allocations during scroll and draw passes
+val PurpleToVioletGradient = Brush.horizontalGradient(listOf(Purple, Violet))
+val PurpleToVioletLinear = Brush.linearGradient(listOf(Purple, Violet))
+val FocusCardGradient = Brush.linearGradient(
+    colors = listOf(Color(0xFF141B2D), Color(0xFF151C31), Color(0xFF181C3A)),
+    start = Offset(0f, 0f),
+    end = Offset(900f, 400f)
+)
+val ContinueCardGradient = Brush.linearGradient(
+    listOf(Color(0xFF6257F2), Color(0xFF8251F4), Color(0xFF9554F1))
+)
+val ActiveBarGradient = Brush.verticalGradient(listOf(Color(0xFF5F45E8), Color(0xFF7846E9)))
+val InactiveBarGradient = Brush.verticalGradient(listOf(Color(0xFFD8D2FA), Color(0xFFC9C0F6)))
+val GoldProgressGradient = Brush.horizontalGradient(listOf(Gold, Color(0xFFFFD46D)))
+
+@Immutable
 data class CourseItem(
     val category: String,
     val title: String,
@@ -37,6 +56,7 @@ data class CourseItem(
 
 enum class CourseIcon { Physics, Math, Chemistry, Book, Code }
 
+@Immutable
 data class StudyTask(
     val id: Int,
     val title: String,
