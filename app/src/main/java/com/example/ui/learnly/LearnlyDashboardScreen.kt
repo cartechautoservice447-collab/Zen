@@ -26,6 +26,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -90,7 +92,9 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LearnlyDashboard() {
-    val scrollState = rememberScrollState()
+    // Lazy composition keeps off-screen dashboard sections out of the active composition.
+    // This reduces work during scroll, timer updates, and small state changes.
+    val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     var selectedDestination by remember { mutableStateOf(Destination.Home) }
     var activeSheet by remember { mutableStateOf<DashboardSheet?>(null) }
@@ -99,11 +103,14 @@ fun LearnlyDashboard() {
     var timerSeconds by remember { mutableIntStateOf(25 * 60) }
     var timerRunning by remember { mutableStateOf(false) }
 
-    LaunchedEffect(timerRunning, timerSeconds) {
-        if (timerRunning && timerSeconds > 0) {
-            delay(1_000)
-            timerSeconds -= 1
-        } else if (timerSeconds <= 0) {
+    // Keep the ticker keyed to running/paused state, not every second.
+    // When the timer is not on screen, ticks won't invalidate the full dashboard.
+    LaunchedEffect(timerRunning) {
+        if (timerRunning) {
+            while (timerSeconds > 0) {
+                delay(1_000)
+                timerSeconds = (timerSeconds - 1).coerceAtLeast(0)
+            }
             timerRunning = false
         }
     }
@@ -115,9 +122,10 @@ fun LearnlyDashboard() {
     val onNavigate: (Destination) -> Unit = { destination ->
         selectedDestination = destination
         when (destination) {
-            Destination.Home -> scope.launch { scrollState.animateScrollTo(0) }
-            Destination.Learn -> scope.launch { scrollState.animateScrollTo(1400) }
-            Destination.Plan -> scope.launch { scrollState.animateScrollTo(1800) }
+            Destination.Home -> scope.launch { listState.animateScrollToItem(0) }
+            // Scroll to semantic section items instead of device-dependent pixel offsets.
+            Destination.Learn -> scope.launch { listState.animateScrollToItem(5) }
+            Destination.Plan -> scope.launch { listState.animateScrollToItem(6) }
             Destination.More -> activeSheet = DashboardSheet.More
         }
     }
@@ -127,46 +135,61 @@ fun LearnlyDashboard() {
             .fillMaxSize()
             .background(Canvas)
     ) {
-        Column(
+        LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(scrollState)
+                .background(Canvas),
+            contentPadding = PaddingValues(bottom = 116.dp)
         ) {
-            HeaderAndFocus(
-                onNotifications = { activeSheet = DashboardSheet.Notifications },
-                onStartStudying = openTimer
-            )
-            ContinueLearningSection(onResume = { openCourse(courseSeed.first()) })
-            LearningRhythmSection(
-                period = period,
-                onPeriodChanged = { period = it },
-                onDetails = { activeSheet = DashboardSheet.Analytics }
-            )
-            QuickToolsSection(
-                onToolClick = { tool ->
-                    activeSheet = when (tool) {
-                        ToolKind.Notes -> DashboardSheet.Notes
-                        ToolKind.Flashcards -> DashboardSheet.Flashcards
-                        ToolKind.Quiz -> DashboardSheet.Quiz
-                        ToolKind.FocusTimer -> DashboardSheet.FocusTimer
-                    }
-                },
-                onStartFocus = openTimer
-            )
-            AchievementsSection()
-            CoursesSection(
-                courses = courseSeed,
-                onSeeAll = { activeSheet = DashboardSheet.AllCourses },
-                onCourseClick = openCourse
-            )
-            TodayPlanSection(
-                tasks = tasks,
-                onToggleTask = { id ->
-                    tasks = tasks.map { task -> if (task.id == id) task.copy(done = !task.done) else task }
-                },
-                onSeeFullPlan = { activeSheet = DashboardSheet.FullPlan }
-            )
-            Spacer(Modifier.height(116.dp))
+            item(key = "header_focus") {
+                HeaderAndFocus(
+                    onNotifications = { activeSheet = DashboardSheet.Notifications },
+                    onStartStudying = openTimer
+                )
+            }
+            item(key = "continue_learning") {
+                ContinueLearningSection(onResume = { openCourse(courseSeed.first()) })
+            }
+            item(key = "learning_rhythm") {
+                LearningRhythmSection(
+                    period = period,
+                    onPeriodChanged = { period = it },
+                    onDetails = { activeSheet = DashboardSheet.Analytics }
+                )
+            }
+            item(key = "quick_tools") {
+                QuickToolsSection(
+                    onToolClick = { tool ->
+                        activeSheet = when (tool) {
+                            ToolKind.Notes -> DashboardSheet.Notes
+                            ToolKind.Flashcards -> DashboardSheet.Flashcards
+                            ToolKind.Quiz -> DashboardSheet.Quiz
+                            ToolKind.FocusTimer -> DashboardSheet.FocusTimer
+                        }
+                    },
+                    onStartFocus = openTimer
+                )
+            }
+            item(key = "achievements") {
+                AchievementsSection()
+            }
+            item(key = "courses") {
+                CoursesSection(
+                    courses = courseSeed,
+                    onSeeAll = { activeSheet = DashboardSheet.AllCourses },
+                    onCourseClick = openCourse
+                )
+            }
+            item(key = "today_plan") {
+                TodayPlanSection(
+                    tasks = tasks,
+                    onToggleTask = { id ->
+                        tasks = tasks.map { task -> if (task.id == id) task.copy(done = !task.done) else task }
+                    },
+                    onSeeFullPlan = { activeSheet = DashboardSheet.FullPlan }
+                )
+            }
         }
 
         BottomNavigationBar(
