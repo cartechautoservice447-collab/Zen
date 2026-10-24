@@ -1,6 +1,6 @@
 {
-  "name": "Learnly",
-  "description": "A premium, modern native Android student learning app with courses, study planner, focus timer, and progress analytics.",
+  "name": "Midnight Focus",
+  "description": "Midnight Focus is a premium dark-mode learning dashboard: daily focus targets, weekly study charts, courses, plans and study tools.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

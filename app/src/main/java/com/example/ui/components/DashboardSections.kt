@@ -32,6 +32,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,7 +65,9 @@ fun TodaysLearningGoals(
     weeklyActivity: List<DailyActivity>,
     modifier: Modifier = Modifier
 ) {
-    val totalWeeklyHours = weeklyActivity.map { it.hours }.sum()
+    val totalWeeklyHours = remember(weeklyActivity) {
+        weeklyActivity.sumOf { it.hours.toDouble() }.toFloat()
+    }
     val isDailyGoalMet = profile.todayFocusMinutes >= profile.dailyGoalMinutes
     val dailyProgress = if (profile.dailyGoalMinutes > 0) {
         (profile.todayFocusMinutes.toFloat() / profile.dailyGoalMinutes.toFloat()).coerceIn(0f, 1f)
@@ -364,7 +367,9 @@ fun StudyInsightCard(
     modifier: Modifier = Modifier,
     onStartFocusClick: () -> Unit = {}
 ) {
-    val mostProductiveDay = weeklyActivity.maxByOrNull { it.hours }?.day ?: "Mon"
+    val mostProductiveDay = remember(weeklyActivity) {
+        weeklyActivity.maxByOrNull { it.hours }?.day ?: "Mon"
+    }
     val isDailyGoalMet = profile.todayFocusMinutes >= profile.dailyGoalMinutes
     val remainingMinutes = (profile.dailyGoalMinutes - profile.todayFocusMinutes).coerceAtLeast(0)
 
@@ -476,9 +481,11 @@ fun AchievementsSection(
     totalHours: Float,
     modifier: Modifier = Modifier
 ) {
-    val unlockedCount = achievements.count { it.isUnlocked }
+    val unlockedCount = remember(achievements) { achievements.count { it.isUnlocked } }
     val totalCount = achievements.size
-    val displayAchievements = achievements.filter { it.isUnlocked }.take(4).ifEmpty { achievements.take(4) }
+    val displayAchievements = remember(achievements) {
+        achievements.filter { it.isUnlocked }.take(4).ifEmpty { achievements.take(4) }
+    }
 
     Column(
         modifier = modifier

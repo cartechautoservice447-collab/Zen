@@ -85,14 +85,16 @@ fun PlannerScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp, vertical = 16.dp)
                 ) {
+                    val doneCount = remember(tasks) { tasks.count { it.isCompleted } }
+                    val leftCount = tasks.size - doneCount
                     Text(
-                        text = "Study Planner",
+                        text = "Plan",
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Timetable schedule, assignment deadlines & exam count",
+                        text = if (leftCount == 0) "Everything done — nice work." else "$leftCount tasks left for today · $doneCount completed",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -192,7 +194,7 @@ fun PlannerScreen(
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(exams) { exam ->
+                        items(exams, key = { it.id }) { exam ->
                             Surface(
                                 shape = RoundedCornerShape(16.dp),
                                 color = MaterialTheme.colorScheme.surface,
@@ -270,7 +272,7 @@ fun PlannerScreen(
                 }
             }
 
-            items(schedule) { slot ->
+            items(schedule, key = { it.id }) { slot ->
                 ScheduleDetailItem(
                     slot = slot,
                     modifier = Modifier.padding(horizontal = 20.dp)
@@ -296,8 +298,9 @@ fun PlannerScreen(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
+                        val pendingCount = remember(tasks) { tasks.count { !it.isCompleted } }
                         Text(
-                            text = "${tasks.count { !it.isCompleted }} pending",
+                            text = "$pendingCount pending",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -306,7 +309,7 @@ fun PlannerScreen(
                 }
             }
 
-            items(tasks) { task ->
+            items(tasks, key = { it.id }) { task ->
                 TaskRowItem(
                     task = task,
                     onToggle = { onToggleTask(task.id) },

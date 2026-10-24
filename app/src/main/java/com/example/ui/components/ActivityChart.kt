@@ -46,7 +46,9 @@ fun ActivityChartContainer(
     modifier: Modifier = Modifier,
     onViewAnalyticsClick: () -> Unit = {}
 ) {
-    val totalHours = weeklyData.sumOf { it.hours.toDouble() }.toFloat()
+    val totalHours = remember(weeklyData) {
+        weeklyData.sumOf { it.hours.toDouble() }.toFloat()
+    }
     val primaryColor = MaterialTheme.colorScheme.primary
     val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
     val outlineColor = MaterialTheme.colorScheme.outline

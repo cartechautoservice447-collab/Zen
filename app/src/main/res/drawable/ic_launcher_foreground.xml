@@ -3,6 +3,6 @@
     <item
         android:width="66dp"
         android:height="66dp"
-        android:drawable="@drawable/learnly_icon"
+        android:drawable="@drawable/learnly_l_icon"
         android:gravity="center" />
 </layer-list>

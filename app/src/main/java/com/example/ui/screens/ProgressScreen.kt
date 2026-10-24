@@ -293,7 +293,7 @@ fun ProgressScreen(
             }
         }
 
-        items(achievements) { achievement ->
+        items(achievements, key = { it.id }) { achievement ->
             AchievementRowItem(
                 achievement = achievement,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)

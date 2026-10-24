@@ -1,60 +1,39 @@
 package com.example.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Indigo300,
-    onPrimary = Indigo900,
-    primaryContainer = Indigo800,
-    onPrimaryContainer = Indigo100,
-    secondary = Sky400,
-    onSecondary = Slate900,
-    secondaryContainer = Slate700,
-    onSecondaryContainer = Sky100,
-    tertiary = Mint400,
-    onTertiary = Slate900,
-    background = DarkBackground,
-    onBackground = Slate100,
-    surface = DarkSurface,
-    onSurface = Slate100,
-    surfaceVariant = DarkSurfaceVariant,
-    onSurfaceVariant = Slate300,
-    outline = DarkOutline
-)
-
-private val LightColorScheme = lightColorScheme(
-    primary = Indigo600,
-    onPrimary = PureWhite,
-    primaryContainer = Indigo50,
-    onPrimaryContainer = Indigo800,
-    secondary = Sky500,
-    onSecondary = PureWhite,
-    secondaryContainer = Sky100,
-    onSecondaryContainer = Slate900,
-    tertiary = Mint500,
-    onTertiary = PureWhite,
-    background = WarmWhite,
-    onBackground = Slate900,
-    surface = PureWhite,
-    onSurface = Slate900,
-    surfaceVariant = WarmGray50,
-    onSurfaceVariant = Slate600,
-    outline = Slate200
+private val MidnightColorScheme = darkColorScheme(
+    primary = MidnightPrimary,
+    onPrimary = MidnightForeground,
+    primaryContainer = MidnightSurface2,
+    onPrimaryContainer = MidnightForeground,
+    secondary = MidnightCyan,
+    onSecondary = MidnightBackground,
+    secondaryContainer = MidnightSurface2,
+    onSecondaryContainer = MidnightCyan,
+    tertiary = MidnightLime,
+    onTertiary = MidnightBackground,
+    background = MidnightBackground,
+    onBackground = MidnightForeground,
+    surface = MidnightCard,
+    onSurface = MidnightForeground,
+    surfaceVariant = MidnightSurface2,
+    onSurfaceVariant = MidnightFgSecondary,
+    outline = MidnightBorder,
+    error = MidnightDestructive,
+    onError = MidnightForeground
 )
 
 @Composable
 fun LearnlyTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
-
+    // Nocturne Learning Lounge / Midnight Focus is a signature midnight dark UI
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = MidnightColorScheme,
         typography = Typography,
         content = content
     )

@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.LearnlyRepository
 import com.example.model.Course
-import com.example.model.Lesson
+import com.example.model.DailyActivity
 import com.example.model.StudentProfile
 import com.example.model.TaskPriority
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,13 +50,36 @@ class LearnlyViewModel(
     private val _showAddTaskDialog = MutableStateFlow(false)
     val showAddTaskDialog: StateFlow<Boolean> = _showAddTaskDialog.asStateFlow()
 
+    private val _chartRange = MutableStateFlow("7D") // "7D", "30D", "90D"
+    val chartRange: StateFlow<String> = _chartRange.asStateFlow()
+
     val studentProfile: StateFlow<StudentProfile> = repository.studentProfile
+    val coursesList: StateFlow<List<Course>> = repository.courses
     val tasks = repository.tasks
     val schedule = repository.schedule
     val weeklyActivity = repository.weeklyActivity
+    val monthlyActivity = repository.monthlyActivity
+    val quarterlyActivity = repository.quarterlyActivity
     val examReminders = repository.examReminders
     val achievements = repository.achievements
     val focusSessions = repository.focusSessions
+    val studyInsights = repository.studyInsights
+    val flashcards = repository.flashcards
+    val studyBuddies = repository.studyBuddies
+
+    // Active chart activity based on selected range
+    val currentChartActivity: StateFlow<List<DailyActivity>> = combine(
+        _chartRange,
+        weeklyActivity,
+        monthlyActivity,
+        quarterlyActivity
+    ) { range, weekly, monthly, quarterly ->
+        when (range) {
+            "30D" -> monthly
+            "90D" -> quarterly
+            else -> weekly
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), repository.weeklyActivity.value)
 
     // Filtered courses based on category and search query
     val filteredCourses: StateFlow<List<Course>> = combine(
@@ -88,6 +111,10 @@ class LearnlyViewModel(
 
     fun openOnboarding() {
         _showOnboarding.value = true
+    }
+
+    fun setChartRange(range: String) {
+        _chartRange.value = range
     }
 
     fun completeOnboarding(gradeLevel: String, studentType: String, dailyGoal: Int) {
@@ -132,6 +159,10 @@ class LearnlyViewModel(
         repository.toggleTask(taskId)
     }
 
+    fun toggleFlashcardMastered(cardId: String) {
+        repository.toggleFlashcardMastered(cardId)
+    }
+
     fun addTask(title: String, subjectCode: String, dueDate: String, priority: TaskPriority) {
         repository.addTask(title, subjectCode, dueDate, priority)
         closeAddTaskDialog()
@@ -139,7 +170,6 @@ class LearnlyViewModel(
 
     fun completeLesson(courseId: String, lessonId: String) {
         repository.completeLesson(courseId, lessonId)
-        // refresh detail course if open
         _selectedCourseForDetail.value?.let { current ->
             if (current.id == courseId) {
                 val updatedCourse = repository.courses.value.firstOrNull { it.id == courseId }
@@ -161,5 +191,6 @@ class LearnlyViewModel(
         _searchQuery.value = ""
         _selectedCategory.value = "All"
         _selectedCourseForDetail.value = null
+        _chartRange.value = "7D"
     }
 }

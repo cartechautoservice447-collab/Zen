@@ -5,16 +5,29 @@ enum class TaskPriority {
 }
 
 data class StudentProfile(
-    val name: String = "Alex Rivera",
-    val email: String = "alex.rivera@edu.org",
+    val name: String = "Alex",
+    val email: String = "alex@midnightfocus.edu",
     val gradeLevel: String = "Undergraduate - STEM",
     val studentType: String = "College",
-    val dailyGoalMinutes: Int = 45,
+    val dailyGoalMinutes: Int = 120,
     val streakDays: Int = 12,
-    val totalStudyHours: Float = 48.5f,
-    val completedLessonsCount: Int = 34,
-    val todayFocusMinutes: Int = 50,
-    val selectedSubjects: List<String> = listOf("Math", "Physics", "Computer Science")
+    val totalStudyHours: Float = 86.4f,
+    val totalStudyTimeFormatted: String = "86h 25m",
+    val completedLessonsCount: Int = 47,
+    val todayFocusMinutes: Int = 75,
+    val weeklyStudyHours: Float = 14.4f,
+    val weeklyGoalHours: Float = 15.0f,
+    val weeklyGoalPercent: Int = 68,
+    val xpPoints: Int = 2450,
+    val quizAccuracyPercent: Int = 94,
+    val selectedSubjects: List<String> = listOf("Chemistry", "Mathematics", "Languages", "Computer Science", "Humanities"),
+    val streakMultiplier: Float = 1.5f,
+    val streakFreezesAvailable: Int = 2,
+    val last7DaysStreak: List<Boolean> = listOf(true, true, true, true, true, true, true),
+    val focusHeadline: String = "Your next breakthrough starts here.",
+    val greeting: String = "Good evening, Alex",
+    val tagline: String = "Ready for a focused session?",
+    val initials: String = "A"
 )
 
 data class Lesson(
@@ -30,7 +43,7 @@ data class Course(
     val id: String,
     val title: String,
     val code: String,
-    val category: String, // "Math", "Physics", "Computer Science", "Chemistry"
+    val category: String, // "Chemistry", "Mathematics", "Languages", "Computer Science", "Humanities"
     val instructor: String,
     val progress: Int, // 0..100
     val totalLessons: Int,
@@ -38,6 +51,8 @@ data class Course(
     val colorHex: Long,
     val nextLessonTitle: String,
     val description: String,
+    val durationMinutes: Int = 24,
+    val accentName: String = "violet", // "violet", "cyan", "lime", "warning", "success"
     val lessons: List<Lesson> = emptyList()
 )
 
@@ -47,7 +62,9 @@ data class TaskItem(
     val subjectCode: String,
     val dueDate: String,
     val priority: TaskPriority = TaskPriority.NORMAL,
-    val isCompleted: Boolean = false
+    val isCompleted: Boolean = false,
+    val courseName: String = "",
+    val windowTime: String = ""
 )
 
 data class TimetableSlot(
@@ -57,15 +74,18 @@ data class TimetableSlot(
     val subjectCode: String,
     val roomLocation: String,
     val instructor: String,
-    val isNow: Boolean = false
+    val isNow: Boolean = false,
+    val isCompleted: Boolean = false
 )
 
 data class DailyActivity(
     val day: String, // "Mon", "Tue", ...
+    val dateLabel: String = "",
     val hours: Float,
-    val targetHours: Float = 1.0f,
+    val targetHours: Float = 1.5f,
     val completedLessons: Int = 0,
-    val isGoalMet: Boolean = false
+    val isGoalMet: Boolean = false,
+    val minutes: Int = 0
 )
 
 data class Achievement(
@@ -75,7 +95,8 @@ data class Achievement(
     val iconName: String,
     val isUnlocked: Boolean,
     val progressText: String,
-    val category: String
+    val category: String,
+    val xpReward: Int = 150
 )
 
 data class FocusSession(
@@ -91,5 +112,38 @@ data class ExamReminder(
     val subject: String,
     val examTitle: String,
     val daysLeft: Int,
-    val date: String
+    val date: String,
+    val priorityLevel: String = "HIGH",
+    val syllabusProgress: Int = 75,
+    val totalTopics: Int = 12,
+    val masteredTopics: Int = 9
+)
+
+data class StudyInsight(
+    val id: String,
+    val title: String,
+    val recommendation: String,
+    val subjectCode: String,
+    val actionLabel: String,
+    val insightType: String // "NEXT_LESSON", "NEEDS_ATTENTION", "STREAK_MOMENTUM"
+)
+
+data class FlashcardItem(
+    val id: String,
+    val subjectCode: String,
+    val topic: String,
+    val question: String,
+    val answer: String,
+    val hint: String = "",
+    val isMastered: Boolean = false
+)
+
+data class StudyBuddyPeer(
+    val id: String,
+    val name: String,
+    val avatarColorHex: Long,
+    val subjectCode: String,
+    val currentTask: String,
+    val minutesActive: Int,
+    val isLive: Boolean = true
 )
