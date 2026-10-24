@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -31,7 +32,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -512,6 +512,7 @@ fun PeriodSelector(period: String, onPeriodChanged: (String) -> Unit) {
                     .clip(CircleShape)
                     .background(if (selected) Color.White else Color.Transparent)
                     .clickable { onPeriodChanged(value) }
+                    .heightIn(min = 44.dp)
                     .padding(horizontal = 9.dp, vertical = 9.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -588,17 +589,37 @@ fun ToolTile(title: String, tileColor: Color, iconColor: Color, icon: androidx.c
             .padding(horizontal = 1.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            Modifier
-                .size(72.dp)
-                .clip(RoundedCornerShape(25.dp))
-                .background(tileColor),
+        // Keep the four-tool row intact while scaling the pastel icon tiles on narrow phones.
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, null, tint = iconColor, modifier = Modifier.size(33.dp))
+            val tileSize = maxWidth.coerceAtMost(72.dp)
+            val glyphSize = if (tileSize < 64.dp) 28.dp else 33.dp
+            Box(
+                Modifier
+                    .size(tileSize)
+                    .clip(RoundedCornerShape(tileSize * 0.35f))
+                    .background(tileColor),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, null, tint = iconColor, modifier = Modifier.size(glyphSize))
+            }
         }
         Spacer(Modifier.height(11.dp))
-        Text(title, color = Ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, lineHeight = 18.sp, minLines = 2, maxLines = 2)
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            Text(
+                title,
+                color = Ink,
+                fontSize = if (maxWidth < 72.dp) 12.sp else 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                lineHeight = 18.sp,
+                minLines = 2,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
@@ -829,6 +850,11 @@ fun BottomNavigationBar(selected: Destination, onSelect: (Destination) -> Unit, 
 @Composable
 fun NavigationItem(destination: Destination, selected: Destination, label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onSelect: (Destination) -> Unit) {
     val active = destination == selected
+    val activeProgress by animateFloatAsState(
+        targetValue = if (active) 1f else 0f,
+        animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+        label = "nav_active_${destination.name.lowercase()}"
+    )
     Column(
         modifier = modifier
             .fillMaxHeight()
@@ -839,13 +865,22 @@ fun NavigationItem(destination: Destination, selected: Destination, label: Strin
     ) {
         Box(
             modifier = Modifier
-                .width(if (active) 54.dp else 48.dp)
+                .width(48.dp + 6.dp * activeProgress)
                 .height(35.dp)
                 .clip(CircleShape)
-                .background(if (active) Purple else Color.Transparent),
+                .background(Purple.copy(alpha = activeProgress)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, null, tint = if (active) Color.White else Color(0xFF77798D), modifier = Modifier.size(23.dp))
+            Icon(
+                icon,
+                null,
+                tint = if (active) Color.White else Color(0xFF77798D),
+                modifier = Modifier.size(23.dp).graphicsLayer {
+                    val scale = 0.96f + (0.04f * activeProgress)
+                    scaleX = scale
+                    scaleY = scale
+                }
+            )
         }
         Spacer(Modifier.height(1.dp))
         Text(label, color = if (active) Ink else Color(0xFF77798D), fontSize = 11.sp, fontWeight = if (active) FontWeight.Bold else FontWeight.Medium)
